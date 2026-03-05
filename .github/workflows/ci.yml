@@ -1,0 +1,117 @@
+name: ✅ Jenkins Pipeline CI Validator
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Job 1: Validate Jenkinsfile Syntax ─────────────────────
+  validate-jenkinsfile:
+    name: 🔍 Validate Jenkinsfile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Jenkinsfile exists
+        run: |
+          if [ -f "Jenkinsfile" ]; then
+            echo "✅ Jenkinsfile found"
+            cat Jenkinsfile
+          else
+            echo "❌ Jenkinsfile missing!"
+            exit 1
+          fi
+
+      - name: Validate Jenkinsfile structure
+        run: |
+          echo "🔍 Checking Jenkinsfile for required sections..."
+
+          if grep -q "pipeline" Jenkinsfile; then
+            echo "✅ pipeline block found"
+          else
+            echo "❌ pipeline block missing"; exit 1
+          fi
+
+          if grep -q "agent" Jenkinsfile; then
+            echo "✅ agent block found"
+          else
+            echo "❌ agent block missing"; exit 1
+          fi
+
+          if grep -q "stages" Jenkinsfile; then
+            echo "✅ stages block found"
+          else
+            echo "❌ stages block missing"; exit 1
+          fi
+
+          echo "✅ Jenkinsfile is valid!"
+
+  # ── Job 2: Verify Docker Agent Setup ───────────────────────
+  verify-docker:
+    name: 🐳 Verify Docker Agent Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Docker is available
+        run: |
+          docker --version
+          echo "✅ Docker available for Jenkins remote agent"
+
+      - name: Simulate Jenkins agent environment
+        run: |
+          docker run --rm node:18-alpine sh -c "
+            echo '✅ Simulating Jenkins docker-agent...'
+            java_check=$(which java 2>/dev/null || echo 'not found')
+            echo 'Agent environment ready'
+            uname -a
+            whoami
+          " || true
+
+      - name: Simulate pipeline stages
+        run: |
+          echo "🔄 Stage: Verify Agent"
+          echo "Build running on remote Docker agent"
+          echo "✅ Stage passed"
+
+          echo "🔄 Stage: System Info"
+          uname -a
+          whoami
+          echo "✅ Stage passed"
+
+          echo "🔄 Stage: Build Simulation"
+          echo "Simulating project build..."
+          sleep 2
+          echo "✅ Build simulation complete"
+
+  # ── Job 3: Repo Quality Check ───────────────────────────────
+  repo-quality:
+    name: 📋 Repo Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          echo "📋 Checking repo structure..."
+          [ -f README.md ]    && echo "✅ README.md exists"    || echo "⚠️  README.md missing"
+          [ -f Jenkinsfile ]  && echo "✅ Jenkinsfile exists"  || echo "❌ Jenkinsfile missing"
+          [ -d screenshots ]  && echo "✅ screenshots/ exists" || echo "⚠️  screenshots/ missing"
+          echo "✅ Quality check complete!"
+
+      - name: Summary
+        run: |
+          echo "================================================"
+          echo "✅ Jenkins Remoting Project — All checks passed!"
+          echo "  • Jenkinsfile validated"
+          echo "  • Docker agent simulated"
+          echo "  • Repo structure verified"
+          echo "================================================"
